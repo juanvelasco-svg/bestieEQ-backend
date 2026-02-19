@@ -1,0 +1,17 @@
+# PDFs académicos: no subir al repo (copyright)
+# El índice FAISS SÍ se sube (son vectores matemáticos, no el texto original)
+documentos/*.pdf
+
+# Métricas: datos de uso, no van al repo
+metricas.jsonl
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+.venv/
+
+# Modelo de embeddings (se descarga automáticamente en ~/.cache)
+# No va al repo: pesa 80MB
+sentence_transformers/

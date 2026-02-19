@@ -1,0 +1,8 @@
+{
+  "pdfs": [
+    "EQFull.pdf"
+  ],
+  "paginas": 553,
+  "chunks": 553,
+  "modelo": "all-MiniLM-L6-v2"
+}
