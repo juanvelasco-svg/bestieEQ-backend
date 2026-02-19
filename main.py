@@ -1,11 +1,5 @@
-"""
-main.py - Servidor Flask de BestieEQ
-Reemplaza FastAPI para evitar problemas de compilación en Render free tier.
-"""
-
 import time
 import os
-import json
 import httpx
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -19,12 +13,8 @@ from rag import cargar_indice, buscar_contexto, indice_listo
 from logger import registrar_consulta, obtener_resumen_hoy
 
 app = Flask(__name__)
-CORS(app, origins=[
-    "http://localhost:3000",
-    FRONTEND_URL,
-], supports_credentials=True)
+CORS(app, origins=["http://localhost:3000", FRONTEND_URL], supports_credentials=True)
 
-# Cargar índice al arrancar
 with app.app_context():
     cargar_indice()
 
@@ -51,7 +41,6 @@ def chat():
 
     inicio = time.time()
 
-    # RAG
     contexto, tokens_contexto = buscar_contexto(pregunta)
     sin_documentos = contexto.startswith("[No")
 
@@ -72,7 +61,6 @@ def chat():
     ]
     mensajes.append({"role": "user", "content": pregunta})
 
-    # Llamar a Groq (síncrono con httpx)
     try:
         respuesta_groq = httpx.post(
             f"{GROQ_BASE_URL}/chat/completions",
@@ -115,14 +103,3 @@ def chat():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
-```
-
-Agrega `flask-cors` al requirements también. El archivo final queda:
-```
-flask==3.0.3
-flask-cors==4.0.1
-sentence-transformers==2.7.0
-faiss-cpu==1.13.0
-numpy==1.26.4
-httpx==0.27.0
-gunicorn==22.0.0
