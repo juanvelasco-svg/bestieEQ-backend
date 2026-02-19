@@ -10,7 +10,7 @@ services:
     # Render busca requirements.txt en la raíz y lo instala automáticamente
     buildCommand: pip install -r requirements.txt
     # Render asigna el puerto via $PORT automáticamente
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: gunicorn main:app --bind 0.0.0.0:$PORT
     # Plan gratuito
     plan: free
     # Variables de entorno: los valores se configuran en el dashboard de Render
