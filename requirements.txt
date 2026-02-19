@@ -1,18 +1,7 @@
-# requirements.txt - Dependencias de BestieEQ Backend
-# Render lee este archivo automáticamente para instalar dependencias
-# No incluir pymupdf aquí: solo se necesita en el script offline local
-
-# ─── Servidor web ─────────────────────────────────────────────────────────────
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
-
-# ─── Cliente HTTP para llamar a Groq ─────────────────────────────────────────
 httpx==0.27.2
-
-# ─── RAG: embeddings locales y búsqueda vectorial ────────────────────────────
 sentence-transformers==3.3.1
-faiss-cpu>=1.7.4
+faiss-cpu==1.7.4
 numpy==1.26.4
-
-# ─── Validación de datos (viene incluido con FastAPI) ─────────────────────────
 pydantic==2.10.3
