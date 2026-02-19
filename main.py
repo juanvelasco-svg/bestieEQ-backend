@@ -67,7 +67,7 @@ class PreguntaRequest(BaseModel):
     pregunta: str = Field(..., min_length=3, max_length=1000)
     es_regeneracion: bool = Field(default=False)
     # Últimos mensajes para que el bot recuerde el hilo de la conversación
-    historial: list = Field(default=[])
+    historial: list[dict] = Field(default=[])
 
 
 class RespuestaResponse(BaseModel):
