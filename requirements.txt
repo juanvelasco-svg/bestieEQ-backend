@@ -11,7 +11,7 @@ httpx==0.27.2
 
 # ─── RAG: embeddings locales y búsqueda vectorial ────────────────────────────
 sentence-transformers==3.3.1
-faiss-cpu==1.9.0
+faiss-cpu>=1.7.4
 numpy==1.26.4
 
 # ─── Validación de datos (viene incluido con FastAPI) ─────────────────────────
