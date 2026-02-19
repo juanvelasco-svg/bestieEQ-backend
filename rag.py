@@ -1,49 +1,34 @@
 """
-rag.py - Motor de búsqueda semántica con FAISS
-Depende de: config.py, carpeta indice_faiss/ (generada por el script offline)
-Es usado por: main.py
-
-Flujo:
-    Al arrancar el servidor  → cargar_indice() carga vectores.index + metadata.json en RAM
-    Por cada pregunta        → buscar_contexto() genera embedding y busca los TOP_K más cercanos
+rag.py - Motor RAG usando HuggingFace Inference API para embeddings
+Sin sentence-transformers: elimina el problema de RAM en Render free tier.
+Los embeddings se generan via API gratuita de HuggingFace, no localmente.
 """
 
 import json
+import os
 import numpy as np
-from pathlib import Path
-from sentence_transformers import SentenceTransformer
+import httpx
 import faiss
 
-from config import INDICE_DIR, EMBEDDING_MODEL, TOP_K
+from config import INDICE_DIR, TOP_K
 
-# Variables globales: se cargan UNA vez al arrancar, se reutilizan en cada consulta
-_modelo: SentenceTransformer | None = None
+# Token de HuggingFace (gratis, se configura en Render como variable de entorno)
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+
 _indice: faiss.Index | None = None
 _metadata: list[dict] | None = None
 
 
 def cargar_indice() -> bool:
-    """
-    Carga en RAM el modelo de embeddings, el índice FAISS y la metadata.
-    Llamada una sola vez desde el lifespan de FastAPI en main.py.
-
-    Retorna True si la carga fue exitosa, False si no hay índice disponible.
-    Si retorna False el chatbot funciona pero sin contexto de documentos.
-    """
-    global _modelo, _indice, _metadata
+    global _indice, _metadata
 
     ruta_vectores = INDICE_DIR / "vectores.index"
     ruta_metadata = INDICE_DIR / "metadata.json"
 
     if not ruta_vectores.exists() or not ruta_metadata.exists():
         print("⚠️  Índice FAISS no encontrado.")
-        print(f"   Esperado en: {INDICE_DIR}")
-        print("   Ejecuta primero: python scripts/indexar_pdfs.py")
         return False
-
-    print("🔄 Cargando modelo de embeddings (puede tardar 30s la primera vez)...")
-    _modelo = SentenceTransformer(EMBEDDING_MODEL)
-    print(f"✅ Modelo cargado: {EMBEDDING_MODEL}")
 
     print("🔄 Cargando índice FAISS...")
     _indice = faiss.read_index(str(ruta_vectores))
@@ -52,58 +37,61 @@ def cargar_indice() -> bool:
     with open(ruta_metadata, "r", encoding="utf-8") as f:
         _metadata = json.load(f)
     print(f"✅ Metadata cargada: {len(_metadata)} fragmentos")
-
+    print("✅ Servidor listo")
     return True
 
 
+def generar_embedding(texto: str) -> np.ndarray | None:
+    """
+    Genera embedding via HuggingFace Inference API (gratuita).
+    No requiere cargar el modelo en RAM.
+    """
+    try:
+        respuesta = httpx.post(
+            HF_API_URL,
+            headers={"Authorization": f"Bearer {HF_TOKEN}"},
+            json={"inputs": texto},
+            timeout=15.0
+        )
+        respuesta.raise_for_status()
+        embedding = np.array(respuesta.json(), dtype=np.float32)
+        # Normalizar para similitud coseno
+        norma = np.linalg.norm(embedding)
+        if norma > 0:
+            embedding = embedding / norma
+        return embedding
+    except Exception as e:
+        print(f"⚠️  Error generando embedding: {e}")
+        return None
+
+
 def buscar_contexto(pregunta: str) -> tuple[str, int]:
-    """
-    Busca los fragmentos de texto más relevantes para la pregunta.
-
-    Args:
-        pregunta: Texto de la pregunta del estudiante
-
-    Retorna:
-        (contexto_str, tokens_estimados)
-        contexto_str: Texto de los TOP_K fragmentos más relevantes, listos para el prompt
-        tokens_estimados: Aproximación de tokens (para métricas). 1 token ≈ 4 caracteres.
-    """
-    if _indice is None or _modelo is None or _metadata is None:
+    if _indice is None or _metadata is None:
         return "[No hay índice de documentos cargado]", 0
 
-    # Generar embedding de la pregunta en el mismo espacio vectorial que los chunks
-    embedding = _modelo.encode(
-        [pregunta],
-        normalize_embeddings=True,   # Normalizar para que el producto interno = similitud coseno
-        show_progress_bar=False
-    )
+    embedding = generar_embedding(pregunta)
+    if embedding is None:
+        return "[Error al generar embedding para la búsqueda]", 0
 
-    # Buscar los TOP_K vectores más cercanos
-    # _indice.search retorna (distancias, índices) — ambos de forma (1, TOP_K)
     distancias, indices = _indice.search(
-        np.array(embedding, dtype=np.float32),
+        np.array([embedding], dtype=np.float32),
         TOP_K
     )
 
     fragmentos = []
     for idx in indices[0]:
         if idx == -1:
-            # FAISS devuelve -1 cuando el índice tiene menos vectores que TOP_K
             continue
         chunk = _metadata[idx]
-        # Encabezado para que el modelo sepa de dónde viene el fragmento
         encabezado = f"--- Fragmento de: {chunk['fuente']} (pág. {chunk.get('pagina', '?')}) ---"
         fragmentos.append(f"{encabezado}\n{chunk['texto']}")
 
     if not fragmentos:
-        return "[No se encontraron fragmentos relevantes en los documentos]", 0
+        return "[No se encontraron fragmentos relevantes]", 0
 
     contexto = "\n\n".join(fragmentos)
-    tokens_estimados = len(contexto) // 4  # Estimación simple: 4 caracteres ≈ 1 token
-
-    return contexto, tokens_estimados
+    return contexto, len(contexto) // 4
 
 
 def indice_listo() -> bool:
-    """Retorna True si el índice está cargado y listo para buscar."""
     return _indice is not None
