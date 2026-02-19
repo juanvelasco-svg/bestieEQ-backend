@@ -1,26 +1,17 @@
-# render.yaml - Configuración de despliegue en Render
-# Este archivo va en la RAÍZ del repositorio bestieEQ-backend
-# Render lo detecta automáticamente al conectar el repo
-# Documentación: https://render.com/docs/render-yaml-spec
-
 services:
   - type: web
     name: bestieEQ-backend
     runtime: python
-    # Render busca requirements.txt en la raíz y lo instala automáticamente
     buildCommand: pip install -r requirements.txt
-    # Render asigna el puerto via $PORT automáticamente
     startCommand: gunicorn main:app --bind 0.0.0.0:$PORT
-    # Plan gratuito
     plan: free
-    # Variables de entorno: los valores se configuran en el dashboard de Render
-    # Nunca escribir los valores reales aquí (este archivo va a GitHub)
     envVars:
       - key: GROQ_API_KEY
-        sync: false          # sync: false = Render pide el valor manualmente en el dashboard
+        sync: false
       - key: FRONTEND_URL
-        sync: false          # Se agrega después de desplegar Vercel
+        sync: false
+      - key: HF_TOKEN
+        sync: false
       - key: PYTHON_VERSION
         value: 3.12.0
-    # Render llama a este endpoint para verificar que el servidor está vivo
     healthCheckPath: /api/health
