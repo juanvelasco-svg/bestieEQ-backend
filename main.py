@@ -15,7 +15,8 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 from config import (
     GROQ_API_KEY, GROQ_MODEL, GROQ_BASE_URL,
@@ -66,7 +67,7 @@ class PreguntaRequest(BaseModel):
     pregunta: str = Field(..., min_length=3, max_length=1000)
     es_regeneracion: bool = Field(default=False)
     # Últimos mensajes para que el bot recuerde el hilo de la conversación
-    historial: list[dict] = Field(default=[])
+    historial: list = Field(default=[])
 
 
 class RespuestaResponse(BaseModel):
