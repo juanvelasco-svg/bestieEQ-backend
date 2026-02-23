@@ -13,7 +13,7 @@ from rag import cargar_indice, buscar_contexto, indice_listo
 from logger import registrar_consulta, obtener_resumen_hoy
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", FRONTEND_URL], supports_credentials=True)
+CORS(app, origins="*", supports_credentials=False)
 
 with app.app_context():
     cargar_indice()
