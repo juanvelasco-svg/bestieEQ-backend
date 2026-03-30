@@ -1,8 +1,9 @@
 {
   "pdfs": [
-    "EQFull.pdf"
+    "EQFull.pdf",
+    "Guía Laboratorio_Elementos de Química_2026-01.pdf"
   ],
-  "paginas": 553,
-  "chunks": 553,
+  "paginas": 593,
+  "chunks": 660,
   "modelo": "all-MiniLM-L6-v2"
 }
